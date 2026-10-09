@@ -1,0 +1,18 @@
+# Dependencies and generated Next.js output
+node_modules/
+.next/
+out/
+build/
+coverage/
+.vercel/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Tests and logs
+playwright-report/
+test-results/
+*.log
+*.tsbuildinfo
