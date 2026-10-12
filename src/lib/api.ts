@@ -1,4 +1,21 @@
-export const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+export class HttpError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "HttpError";
+  }
+}
+
+export const API =
+  process.env.NODE_ENV === "production"
+    ? ""
+    : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(
+        /\/+$/,
+        "",
+      );
+
 export async function request<T>(
   path: string,
   init: RequestInit = {},
@@ -25,7 +42,10 @@ export async function request<T>(
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.message || `Error HTTP ${response.status}`);
+    throw new HttpError(
+      response.status,
+      body.message || `Error HTTP ${response.status}`,
+    );
   }
   return response.json();
 }

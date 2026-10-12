@@ -23,7 +23,7 @@ import {
   Wifi,
   Zap,
 } from "lucide-react";
-import { request } from "@/lib/api";
+import { HttpError, request } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { calculateInvoiceAmounts, formatCents } from "@/lib/money";
 
@@ -106,8 +106,7 @@ export default function Home() {
       setInvoices(ins);
       setHealth("ok");
     } catch (e) {
-      if (e instanceof Error && e.message.includes("Autenticación"))
-        setMe(null);
+      if (e instanceof HttpError && e.status === 401) setMe(null);
       else setHealth("error");
     }
   };
