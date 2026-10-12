@@ -8,9 +8,15 @@ const ancestors = (
   .map((x) => x.trim())
   .filter(Boolean)
   .join(" ");
+// Proxy the API through the frontend's own domain so session/CSRF cookies are first-party.
+const backendUrl = process.env.BACKEND_URL?.replace(/\/+$/, "");
 const config: NextConfig = {
   outputFileTracingRoot: path.resolve(process.cwd(), ".."),
   turbopack: { root: path.resolve(process.cwd(), "..") },
+  async rewrites() {
+    if (!backendUrl) return [];
+    return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];
+  },
   async headers() {
     return [
       {
