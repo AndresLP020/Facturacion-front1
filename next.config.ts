@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { existsSync } from "node:fs";
 import path from "node:path";
 const ancestors = (
   process.env.ALLOWED_FRAME_ANCESTORS ||
@@ -13,9 +14,15 @@ const apiOrigin =
     ? ""
     : (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/+$/, "");
 const connectSrc = ["'self'", apiOrigin].filter(Boolean).join(" ");
+const parent = path.resolve(process.cwd(), "..");
+const isMonorepo = existsSync(path.join(parent, "frontend", "package.json"));
 const config: NextConfig = {
-  outputFileTracingRoot: path.resolve(process.cwd(), ".."),
-  turbopack: { root: path.resolve(process.cwd(), "..") },
+  ...(isMonorepo
+    ? {
+        outputFileTracingRoot: parent,
+        turbopack: { root: parent },
+      }
+    : {}),
   async headers() {
     return [
       {
