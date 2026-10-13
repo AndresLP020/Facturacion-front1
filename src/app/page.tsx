@@ -24,6 +24,11 @@ import {
   Zap,
 } from "lucide-react";
 import { HttpError, request } from "@/lib/api";
+import {
+  ghlContextLabel,
+  probeGhlContext,
+  type GhlContextView,
+} from "@/lib/ghl-context";
 import { Button } from "@/components/ui/button";
 import { calculateInvoiceAmounts, formatCents } from "@/lib/money";
 
@@ -86,7 +91,8 @@ export default function Home() {
     [invoiceForm, setInvoiceForm] = useState<InvoiceForm>(initialInvoice),
     [loadedDraft, setLoadedDraft] = useState<Invoice | null>(null),
     [invoiceCustomerId, setInvoiceCustomerId] = useState(""),
-    [ghlProbe, setGhlProbe] = useState<{ result: string; correlationId: string; message: string } | null>(null);
+    [ghlProbe, setGhlProbe] = useState<{ result: string; correlationId: string; message: string } | null>(null),
+    [ghlContext, setGhlContext] = useState<GhlContextView>({ status: "idle" });
   const invoiceTotals = calculateInvoiceAmounts(invoiceForm);
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -115,6 +121,8 @@ export default function Home() {
       .then(() => setHealth("ok"))
       .catch(() => setHealth("error"));
     void load();
+    setGhlContext({ status: "waiting" });
+    void probeGhlContext().then(setGhlContext);
   }, []);
   const flash = (message: string) => {
     setNotice(message);
@@ -288,7 +296,11 @@ export default function Home() {
       setGhlProbe(result);
       flash("Prueba local registrada. No se contactó GHL.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo ejecutar la prueba local.");
+      setError(
+        e instanceof Error
+          ? e.message
+          : "No se pudo ejecutar la prueba local.",
+      );
     }
   }
   if (!me)
@@ -346,6 +358,9 @@ export default function Home() {
             <code>Demo-AIDA-2026!</code>
             <br />
             La cuenta alternativa de aislamiento está documentada en README.
+            <br />
+            Contexto GHL: {ghlContextLabel(ghlContext.status)}
+            {ghlContext.message ? ` · ${ghlContext.message}` : ""}
           </div>
           <p className="pill" style={{ marginTop: 14 }}>
             SANDBOX · timbrado ficticio, sin validez fiscal
@@ -764,7 +779,18 @@ export default function Home() {
                   ],
                   ["Empresa de prueba", me.company.name],
                   ["Identificador de empresa", me.company.id],
-                  ["Subcuenta GHL", "Pendiente de validar contexto firmado"],
+                  [
+                    "Contexto GHL",
+                    ghlContext.context?.activeLocation
+                      ? `${ghlContextLabel(ghlContext.status)} · ${ghlContext.context.activeLocation}`
+                      : ghlContextLabel(ghlContext.status),
+                  ],
+                  [
+                    "Usuario GHL",
+                    ghlContext.context
+                      ? `${ghlContext.context.userName || "—"} (${ghlContext.context.userId})`
+                      : "—",
+                  ],
                   [
                     "Última operación",
                     invoices[0]
@@ -807,6 +833,32 @@ export default function Home() {
                     </span>
                   </div>
                 </div>
+              </div>
+              <div className="card" style={{ marginTop: 17 }}>
+                <div className="section-title">Comunicación Custom Page ↔ API</div>
+                <p className="subtle" style={{ marginTop: 10 }}>
+                  Pide el contexto cifrado al parent de HighLevel y lo descifra el backend con el Shared Secret. No inicia sesión ni llama APIs de GHL.
+                </p>
+                <p className="subtle" style={{ marginTop: 8 }}>
+                  {ghlContext.message || ghlContextLabel(ghlContext.status)}
+                </p>
+                {ghlContext.context && (
+                  <p className="subtle" style={{ marginTop: 8 }}>
+                    Location: {ghlContext.context.activeLocation || "agencia (sin activeLocation)"}
+                    <br />
+                    Email: {ghlContext.context.email || "—"}
+                  </p>
+                )}
+                <button
+                  className="btn primary"
+                  style={{ marginTop: 14 }}
+                  onClick={() => {
+                    setGhlContext({ status: "waiting" });
+                    void probeGhlContext().then(setGhlContext);
+                  }}
+                >
+                  Comprobar contexto GHL
+                </button>
               </div>
               <div className="card" style={{ marginTop: 17 }}>
                 <div className="section-title">Prueba local del flujo GHL</div>
